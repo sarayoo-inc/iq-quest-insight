@@ -79,7 +79,7 @@ const ResultCard = ({
           </div>
           
           <div className={cn(
-            "grid transition-all duration-300 ease-out-expo",
+            "grid transition-all duration-300",
             showDetails ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
           )}>
             <div className="overflow-hidden">

@@ -1,12 +1,16 @@
 
 import { useEffect, useState } from 'react';
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { CheckIcon, CreditCardIcon, StarIcon } from 'lucide-react';
 import { toast } from 'sonner';
+
+// Replace with your actual Stripe publishable key
+const stripePromise = loadStripe('pk_test_51OWdEt2lYf7D1sK7AXOz68fRpMYJoZR7CG7mJJYXLyD6SpE03Zt7RDM3WOY1M1izj8d5Cxst9q7I7HhCGgIx8uqd00P9GdZAqP');
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -14,62 +18,109 @@ interface PaymentModalProps {
   onSuccess: () => void;
 }
 
-const PaymentModal = ({ isOpen, onClose, onSuccess }: PaymentModalProps) => {
+const CheckoutForm = ({ onSuccess, onClose }: { onSuccess: () => void; onClose: () => void }) => {
+  const stripe = useStripe();
+  const elements = useElements();
   const [isProcessing, setIsProcessing] = useState(false);
-  const [formData, setFormData] = useState({
-    cardNumber: '',
-    expiryDate: '',
-    cvc: '',
-    name: ''
-  });
-  
-  // Reset form when modal opens
-  useEffect(() => {
-    if (isOpen) {
-      setFormData({
-        cardNumber: '',
-        expiryDate: '',
-        cvc: '',
-        name: ''
-      });
-    }
-  }, [isOpen]);
-  
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    
-    // Simple formatting for card number (spaces every 4 digits)
-    if (name === 'cardNumber') {
-      const formatted = value.replace(/\s/g, '').replace(/(\d{4})/g, '$1 ').trim();
-      setFormData({ ...formData, [name]: formatted.substring(0, 19) });
-      return;
-    }
-    
-    // Simple formatting for expiry date (MM/YY)
-    if (name === 'expiryDate') {
-      let formatted = value.replace(/\D/g, '');
-      if (formatted.length > 2) {
-        formatted = formatted.substring(0, 2) + '/' + formatted.substring(2, 4);
-      }
-      setFormData({ ...formData, [name]: formatted });
-      return;
-    }
-    
-    setFormData({ ...formData, [name]: value });
-  };
-  
-  const handleSubmit = (e: React.FormEvent) => {
+  const [name, setName] = useState('');
+  const [cardError, setCardError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!stripe || !elements) {
+      // Stripe.js has not loaded yet
+      return;
+    }
+
     setIsProcessing(true);
     
-    // Simulate payment processing
-    setTimeout(() => {
+    // In a real implementation, you would create a payment intent on your server
+    // Here we'll simulate a successful payment after a delay
+    setTimeout(async () => {
+      // Get the CardElement
+      const cardElement = elements.getElement(CardElement);
+      
+      if (cardElement) {
+        // Use your card Element with other Stripe.js APIs
+        const { error, paymentMethod } = await stripe.createPaymentMethod({
+          type: 'card',
+          card: cardElement,
+        });
+
+        if (error) {
+          console.error(error);
+          setCardError(error.message || 'An error occurred with your payment');
+          setIsProcessing(false);
+        } else {
+          console.log('PaymentMethod', paymentMethod);
+          // In a real implementation, you would send this paymentMethod.id to your server
+          // For now, we'll simulate a successful payment
+          toast.success('Premium access granted!');
+          onSuccess();
+          onClose();
+        }
+      }
+
       setIsProcessing(false);
-      toast.success('Premium access granted!');
-      onSuccess();
     }, 1500);
   };
-  
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="name">Name on Card</Label>
+        <input
+          id="name"
+          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="John Smith"
+          required
+        />
+      </div>
+      
+      <div className="space-y-2">
+        <Label htmlFor="card-element">Card Details</Label>
+        <div className="p-3 border rounded-md">
+          <CardElement
+            id="card-element"
+            options={{
+              style: {
+                base: {
+                  fontSize: '16px',
+                  color: '#424770',
+                  '::placeholder': {
+                    color: '#aab7c4',
+                  },
+                },
+                invalid: {
+                  color: '#9e2146',
+                },
+              },
+            }}
+          />
+        </div>
+        {cardError && (
+          <p className="text-sm text-red-500 mt-1">{cardError}</p>
+        )}
+      </div>
+      
+      <DialogFooter className="mt-6">
+        <Button
+          type="submit"
+          className="w-full bg-quiz-accent hover:bg-quiz-accent/90"
+          disabled={isProcessing || !stripe}
+        >
+          {isProcessing ? 'Processing...' : 'Pay $9.99'}
+        </Button>
+      </DialogFooter>
+    </form>
+  );
+};
+
+const PaymentModal = ({ isOpen, onClose, onSuccess }: PaymentModalProps) => {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
@@ -112,72 +163,9 @@ const PaymentModal = ({ isOpen, onClose, onSuccess }: PaymentModalProps) => {
             </CardContent>
           </Card>
           
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Name on Card</Label>
-              <Input 
-                id="name" 
-                name="name"
-                placeholder="John Smith"
-                value={formData.name}
-                onChange={handleChange}
-                required
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="cardNumber">Card Number</Label>
-              <div className="relative">
-                <Input 
-                  id="cardNumber" 
-                  name="cardNumber"
-                  placeholder="4242 4242 4242 4242" 
-                  value={formData.cardNumber}
-                  onChange={handleChange}
-                  maxLength={19}
-                  required
-                />
-                <CreditCardIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="expiryDate">Expiry Date</Label>
-                <Input 
-                  id="expiryDate" 
-                  name="expiryDate"
-                  placeholder="MM/YY" 
-                  value={formData.expiryDate}
-                  onChange={handleChange}
-                  maxLength={5}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="cvc">CVC</Label>
-                <Input 
-                  id="cvc" 
-                  name="cvc"
-                  placeholder="123" 
-                  value={formData.cvc}
-                  onChange={handleChange}
-                  maxLength={3}
-                  required
-                />
-              </div>
-            </div>
-            
-            <DialogFooter className="mt-6">
-              <Button
-                type="submit"
-                className="w-full bg-quiz-accent hover:bg-quiz-accent/90"
-                disabled={isProcessing}
-              >
-                {isProcessing ? 'Processing...' : 'Pay $9.99'}
-              </Button>
-            </DialogFooter>
-          </form>
+          <Elements stripe={stripePromise}>
+            <CheckoutForm onSuccess={onSuccess} onClose={onClose} />
+          </Elements>
         </div>
       </DialogContent>
     </Dialog>
