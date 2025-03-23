@@ -1,4 +1,3 @@
-
 import type { Config } from "tailwindcss";
 
 export default {
@@ -77,6 +76,9 @@ export default {
 				md: 'calc(var(--radius) - 2px)',
 				sm: 'calc(var(--radius) - 4px)'
 			},
+			transitionTimingFunction: {
+				'ease-out-expo': 'cubic-bezier(0.19, 1, 0.22, 1)'
+			},
 			keyframes: {
 				'accordion-down': {
 					from: { height: '0' },
@@ -120,9 +122,6 @@ export default {
 				'slide-down': 'slide-down 0.5s ease-out',
 				'scale-in': 'scale-in 0.5s ease-out',
 				'pulse-subtle': 'pulse-subtle 2s ease-in-out infinite'
-			},
-			transitionTimingFunction: {
-				'ease-out-expo': 'cubic-bezier(0.19, 1, 0.22, 1)'
 			}
 		}
 	},

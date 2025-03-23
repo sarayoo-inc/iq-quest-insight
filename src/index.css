@@ -125,7 +125,7 @@
   }
   
   .hover-lift {
-    @apply transition-all-ease hover:-translate-y-1 hover:shadow-md;
+    @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-md;
   }
 
   .text-balance {
