@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
@@ -9,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { CheckIcon, CreditCardIcon, StarIcon } from 'lucide-react';
 import { toast } from 'sonner';
 
-// Replace with your actual Stripe publishable key
+// Replace with your actual Stripe publishable key from your Stripe dashboard
 const stripePromise = loadStripe('pk_test_51OWdEt2lYf7D1sK7AXOz68fRpMYJoZR7CG7mJJYXLyD6SpE03Zt7RDM3WOY1M1izj8d5Cxst9q7I7HhCGgIx8uqd00P9GdZAqP');
 
 interface PaymentModalProps {
@@ -23,6 +22,7 @@ const CheckoutForm = ({ onSuccess, onClose }: { onSuccess: () => void; onClose: 
   const elements = useElements();
   const [isProcessing, setIsProcessing] = useState(false);
   const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
   const [cardError, setCardError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -35,17 +35,25 @@ const CheckoutForm = ({ onSuccess, onClose }: { onSuccess: () => void; onClose: 
 
     setIsProcessing(true);
     
-    // In a real implementation, you would create a payment intent on your server
-    // Here we'll simulate a successful payment after a delay
-    setTimeout(async () => {
-      // Get the CardElement
+    try {
+      // In a real implementation, you would:
+      // 1. Make an API call to your backend to create a PaymentIntent
+      // Example: const { clientSecret } = await fetch('/api/create-payment-intent', { method: 'POST', ... })
+      
+      // 2. Confirm the payment with Stripe using the clientSecret
+      // const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, { ... })
+      
+      // For now, we'll simulate this process
       const cardElement = elements.getElement(CardElement);
       
       if (cardElement) {
-        // Use your card Element with other Stripe.js APIs
         const { error, paymentMethod } = await stripe.createPaymentMethod({
           type: 'card',
           card: cardElement,
+          billing_details: {
+            name,
+            email,
+          },
         });
 
         if (error) {
@@ -54,16 +62,25 @@ const CheckoutForm = ({ onSuccess, onClose }: { onSuccess: () => void; onClose: 
           setIsProcessing(false);
         } else {
           console.log('PaymentMethod', paymentMethod);
-          // In a real implementation, you would send this paymentMethod.id to your server
-          // For now, we'll simulate a successful payment
+          // This is where you would normally send the paymentMethod.id to your server
+          // and complete the payment there, but we'll simulate success
+          
+          // Log payment info for demonstration purposes
+          console.log('Payment would go to connected Stripe account');
+          console.log('Customer:', { name, email });
+          console.log('Payment method:', paymentMethod.id);
+          
           toast.success('Premium access granted!');
           onSuccess();
           onClose();
         }
       }
-
+    } catch (err) {
+      console.error('Payment error:', err);
+      toast.error('Payment failed. Please try again.');
+    } finally {
       setIsProcessing(false);
-    }, 1500);
+    }
   };
 
   return (
@@ -77,6 +94,19 @@ const CheckoutForm = ({ onSuccess, onClose }: { onSuccess: () => void; onClose: 
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="John Smith"
+          required
+        />
+      </div>
+      
+      <div className="space-y-2">
+        <Label htmlFor="email">Email</Label>
+        <input
+          id="email"
+          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="your@email.com"
           required
         />
       </div>
